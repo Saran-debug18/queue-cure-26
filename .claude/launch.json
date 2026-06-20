@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "queue-cure-client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "C:/Users/Saran/Queue_Cure/client"],
+      "port": 5173,
+      "autoPort": false
+    }
+  ]
+}

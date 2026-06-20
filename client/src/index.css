@@ -1,0 +1,198 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Palette ─── */
+:root {
+  --base:       #04080F;
+  --surface:    #080F1D;
+  --raised:     #0C1525;
+  --border:     #162035;
+  --border-hi:  #1E3050;
+  --teal:       #0DB9D7;
+  --teal-dim:   #065368;
+  --teal-glow:  rgba(13,185,215,0.18);
+  --amber:      #F5A623;
+  --amber-dim:  #7C4A00;
+  --rose:       #F43F5E;
+  --rose-dim:   #6B1229;
+  --emerald:    #10B981;
+  --text:       #E8EDF5;
+  --text-soft:  #8C9BBB;
+  --text-dim:   #3C4F6E;
+  --shadow:     0 4px 24px rgba(0,0,0,0.6);
+  --shadow-teal:0 0 40px rgba(13,185,215,0.25);
+}
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    background: var(--base);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+  }
+
+  /* subtle grid pattern on html */
+  html {
+    background: var(--base);
+    background-image:
+      linear-gradient(rgba(13,185,215,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(13,185,215,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  ::selection { background: var(--teal-dim); color: #fff; }
+}
+
+/* ─── Typography ─── */
+.mono { font-family: 'JetBrains Mono', monospace; }
+.display { font-size: clamp(3rem, 8vw, 7rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+
+/* ─── Components ─── */
+@layer components {
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-raised {
+    background: var(--raised);
+    border: 1px solid var(--border-hi);
+    border-radius: 12px;
+  }
+
+  /* Glow border on hover */
+  .card-glow {
+    transition: border-color 200ms, box-shadow 200ms;
+  }
+  .card-glow:hover {
+    border-color: var(--teal-dim);
+    box-shadow: 0 0 0 1px var(--teal-dim), var(--shadow);
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center gap-2 font-semibold text-sm select-none cursor-pointer transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
+    border-radius: 8px;
+    padding: 0.625rem 1.25rem;
+    white-space: nowrap;
+  }
+  .btn-teal {
+    @apply btn;
+    background: var(--teal);
+    color: #020F18;
+    box-shadow: 0 0 20px rgba(13,185,215,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+  .btn-teal:not(:disabled):hover {
+    background: #12D0EC;
+    box-shadow: 0 0 30px rgba(13,185,215,0.45);
+    transform: translateY(-1px);
+  }
+  .btn-teal:not(:disabled):active { transform: translateY(0); }
+
+  .btn-ghost {
+    @apply btn;
+    background: var(--raised);
+    color: var(--text-soft);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:not(:disabled):hover {
+    background: var(--border);
+    color: var(--text);
+    border-color: var(--border-hi);
+  }
+
+  .btn-danger {
+    @apply btn;
+    background: var(--rose);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(244,63,94,0.25);
+  }
+  .btn-danger:not(:disabled):hover { background: #fb4d6b; transform: translateY(-1px); }
+
+  .btn-success {
+    @apply btn;
+    background: var(--emerald);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(16,185,129,0.2);
+  }
+  .btn-success:not(:disabled):hover { background: #0fca90; transform: translateY(-1px); }
+
+  .btn-amber {
+    @apply btn;
+    background: var(--amber);
+    color: #1A0E00;
+    box-shadow: 0 0 20px rgba(245,166,35,0.2);
+  }
+  .btn-amber:not(:disabled):hover { background: #f8b53d; transform: translateY(-1px); }
+
+  /* Input */
+  .input {
+    @apply w-full text-sm font-medium;
+    background: var(--base);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 0.625rem 0.875rem;
+    outline: none;
+    transition: border-color 150ms, box-shadow 150ms;
+    font-family: 'Inter', sans-serif;
+  }
+  .input:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px rgba(13,185,215,0.12);
+  }
+  .input::placeholder { color: var(--text-dim); }
+
+  .label {
+    @apply block text-xs font-semibold uppercase tracking-wider mb-1.5;
+    color: var(--text-dim);
+  }
+
+  /* Select */
+  select.input { cursor: pointer; }
+}
+
+/* ─── Animated glow ring for NOW SERVING ─── */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(13,185,215,0.3), 0 0 60px rgba(13,185,215,0.1); }
+  50%       { box-shadow: 0 0 0 12px rgba(13,185,215,0), 0 0 80px rgba(13,185,215,0.2); }
+}
+.glow-ring { animation: glowPulse 2.8s ease-in-out infinite; }
+
+@keyframes numberIn {
+  from { transform: translateY(20px) scale(0.92); opacity: 0; filter: blur(4px); }
+  to   { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
+}
+.num-enter { animation: numberIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+@keyframes ticker {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.ticker-in { animation: ticker 0.3s ease-out forwards; }
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ─── Table ─── */
+.queue-table tr { transition: background 120ms; }
+.queue-table tbody tr:hover { background: rgba(13,185,215,0.04); }
+
+/* ─── Pill badges ─── */
+.pill {
+  @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+}
