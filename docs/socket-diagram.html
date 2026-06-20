@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Socket Event Diagram — Queue Cure '26</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #04080F; color: #E8EDF5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* Header */
+  .header {
+    position: sticky; top: 0; z-index: 10;
+    padding: 20px 32px;
+    display: flex; align-items: center; gap: 16px;
+    background: #080F1D; border-bottom: 1px solid #162035;
+  }
+  .header h1 { font-size: 20px; font-weight: 900; color: #E8EDF5; letter-spacing: -0.03em; }
+  .header p { font-size: 12px; margin-top: 2px; color: #6B7FA3; }
+  .print-btn {
+    margin-left: auto; padding: 8px 16px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    background: rgba(13,185,215,0.1); color: #0DB9D7;
+    border: 1px solid rgba(13,185,215,0.3); transition: all 0.2s;
+  }
+  .print-btn:hover { background: rgba(13,185,215,0.2); }
+
+  .content { max-width: 1100px; margin: 0 auto; padding: 32px; }
+
+  /* Legend */
+  .legend { display: flex; align-items: center; gap: 24px; font-size: 12px; font-weight: 600; margin-bottom: 32px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-line { width: 32px; height: 2px; border-radius: 1px; }
+
+  /* SVG diagram */
+  .diagram-wrap {
+    border-radius: 16px; overflow: hidden;
+    background: #080F1D; border: 1px solid #162035;
+    margin-bottom: 40px;
+  }
+  .diagram-wrap svg { width: 100%; display: block; }
+
+  /* Event reference */
+  .section-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #6B7FA3; margin-bottom: 16px;
+  }
+  .event-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+  @media (max-width: 700px) { .event-grid { grid-template-columns: 1fr; } }
+
+  .col-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+  .pills { display: flex; flex-direction: column; gap: 8px; }
+
+  .pill {
+    width: 100%; text-align: left; border-radius: 12px; padding: 12px 16px;
+    cursor: pointer; background: #080F1D; border: 1px solid #162035;
+    transition: all 0.2s; font-family: inherit;
+  }
+  .pill:hover { border-color: #243050; }
+  .pill.active { box-shadow: 0 0 20px rgba(13,185,215,0.1); }
+
+  .pill-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .pill-left { display: flex; align-items: center; gap: 8px; }
+  .badge {
+    font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 99px;
+    flex-shrink: 0; font-family: monospace;
+  }
+  .badge-c2s { background: rgba(13,185,215,0.15); color: #0DB9D7; }
+  .badge-s2c { background: rgba(16,185,129,0.15); color: #10B981; }
+  .pill-name { font-size: 12px; font-weight: 700; font-family: monospace; }
+  .pill-trigger { font-size: 10px; color: #6B7FA3; line-height: 1.5; }
+
+  /* Detail panel */
+  .detail {
+    border-radius: 16px; padding: 24px;
+    background: #080F1D; margin-top: 16px;
+    display: none;
+  }
+  .detail.visible { display: block; }
+  .detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .detail-dir { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 99px; }
+  .detail-name { font-size: 18px; font-weight: 900; font-family: monospace; }
+  .detail-trigger { font-size: 14px; color: #8C9BBB; margin-bottom: 12px; }
+  .detail-trigger strong { color: #E8EDF5; }
+  .label-sm { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #3C4F6E; margin-bottom: 6px; }
+  .payload-code {
+    font-size: 12px; font-family: monospace; color: #0DB9D7;
+    background: #04080F; border: 1px solid #162035;
+    border-radius: 8px; padding: 10px 14px; display: block; margin-bottom: 12px;
+    word-break: break-all;
+  }
+  .response-text { font-size: 13px; color: #8C9BBB; }
+
+  @media print {
+    .header { position: static; }
+    .print-btn { display: none; }
+    .pill { cursor: default; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Socket Event Diagram</h1>
+    <p>Queue Cure '26 — Real-time event flow between Receptionist Client ↔ Node.js Server</p>
+  </div>
+  <button class="print-btn" onclick="window.print()">⬇ Print / Export</button>
+</div>
+
+<div class="content">
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-line" style="background:#0DB9D7"></div><span style="color:#0DB9D7">Client → Server</span></div>
+    <div class="legend-item"><div class="legend-line" style="background:#10B981"></div><span style="color:#10B981">Server → Client (broadcast)</span></div>
+    <div class="legend-item"><div class="legend-line" style="background:#F5A623"></div><span style="color:#F5A623">Queue state control</span></div>
+    <div class="legend-item"><div class="legend-line" style="background:#F43F5E"></div><span style="color:#F43F5E">Emergency / alerts</span></div>
+  </div>
+
+  <!-- SVG Flow Diagram -->
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg">
+      <rect width="900" height="560" fill="#080F1D"/>
+
+      <!-- Column headers -->
+      <rect x="30" y="20" width="200" height="44" rx="10" fill="rgba(13,185,215,0.1)" stroke="rgba(13,185,215,0.3)" stroke-width="1"/>
+      <text x="130" y="38" text-anchor="middle" fill="#0DB9D7" font-size="11" font-weight="700" font-family="monospace">RECEPTIONIST CLIENT</text>
+      <text x="130" y="56" text-anchor="middle" fill="#6B7FA3" font-size="9" font-family="monospace">React + Zustand + Socket.IO</text>
+
+      <rect x="340" y="20" width="220" height="44" rx="10" fill="rgba(245,166,35,0.08)" stroke="rgba(245,166,35,0.25)" stroke-width="1"/>
+      <text x="450" y="38" text-anchor="middle" fill="#F5A623" font-size="11" font-weight="700" font-family="monospace">SOCKET.IO SERVER</text>
+      <text x="450" y="56" text-anchor="middle" fill="#6B7FA3" font-size="9" font-family="monospace">Node.js + Express + Socket.IO</text>
+
+      <rect x="670" y="20" width="200" height="44" rx="10" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+      <text x="770" y="38" text-anchor="middle" fill="#10B981" font-size="11" font-weight="700" font-family="monospace">WAITING ROOM CLIENT</text>
+      <text x="770" y="56" text-anchor="middle" fill="#6B7FA3" font-size="9" font-family="monospace">React + Zustand + Socket.IO</text>
+
+      <!-- Timelines -->
+      <line x1="130" y1="70" x2="130" y2="545" stroke="#162035" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <line x1="450" y1="70" x2="450" y2="545" stroke="#162035" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <line x1="770" y1="70" x2="770" y2="545" stroke="#162035" stroke-width="1.5" stroke-dasharray="4,4"/>
+
+      <!-- Defs -->
+      <defs>
+        <marker id="arrowTeal" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0DB9D7"/></marker>
+        <marker id="arrowTealDim" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3C4F6E"/></marker>
+        <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#10B981"/></marker>
+        <marker id="arrowAmber" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#F5A623"/></marker>
+        <marker id="arrowRose" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#F43F5E"/></marker>
+        <marker id="arrowGray" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6B7FA3"/></marker>
+      </defs>
+
+      <!-- Section: patient:add -->
+      <text x="130" y="90" text-anchor="middle" fill="#3C4F6E" font-size="8" font-family="monospace">── patient:add ──</text>
+      <line x1="140" y1="108" x2="440" y2="108" stroke="#0DB9D7" stroke-width="1.5" marker-end="url(#arrowTeal)"/>
+      <text x="285" y="103" text-anchor="middle" fill="#0DB9D7" font-size="9" font-weight="700" font-family="monospace">patient:add</text>
+      <line x1="440" y1="122" x2="140" y2="122" stroke="#3C4F6E" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arrowTealDim)"/>
+      <text x="285" y="135" text-anchor="middle" fill="#3C4F6E" font-size="8" font-family="monospace">ACK {success, patient}</text>
+      <line x1="460" y1="145" x2="760" y2="145" stroke="#10B981" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+      <line x1="440" y1="145" x2="150" y2="145" stroke="#10B981" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+      <text x="450" y="140" text-anchor="middle" fill="#10B981" font-size="9" font-weight="700" font-family="monospace">queue:update (broadcast)</text>
+
+      <!-- Section: token:next -->
+      <text x="130" y="175" text-anchor="middle" fill="#3C4F6E" font-size="8" font-family="monospace">── token:next ──</text>
+      <line x1="140" y1="192" x2="440" y2="192" stroke="#0DB9D7" stroke-width="1.5" marker-end="url(#arrowTeal)"/>
+      <text x="285" y="187" text-anchor="middle" fill="#0DB9D7" font-size="9" font-weight="700" font-family="monospace">token:next</text>
+      <line x1="460" y1="206" x2="760" y2="206" stroke="#10B981" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+      <line x1="440" y1="206" x2="150" y2="206" stroke="#10B981" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+      <text x="450" y="201" text-anchor="middle" fill="#10B981" font-size="9" font-weight="700" font-family="monospace">queue:update (broadcast)</text>
+      <line x1="460" y1="222" x2="760" y2="222" stroke="#F5A623" stroke-width="1.5" marker-end="url(#arrowAmber)"/>
+      <line x1="440" y1="222" x2="150" y2="222" stroke="#F5A623" stroke-width="1.5" marker-end="url(#arrowAmber)"/>
+      <text x="450" y="217" text-anchor="middle" fill="#F5A623" font-size="9" font-weight="700" font-family="monospace">token:called (broadcast)</text>
+
+      <!-- Section: emergency:insert -->
+      <text x="130" y="252" text-anchor="middle" fill="#3C4F6E" font-size="8" font-family="monospace">── emergency ──</text>
+      <line x1="140" y1="268" x2="440" y2="268" stroke="#F43F5E" stroke-width="1.5" marker-end="url(#arrowRose)"/>
+      <text x="285" y="263" text-anchor="middle" fill="#F43F5E" font-size="9" font-weight="700" font-family="monospace">emergency:insert</text>
+      <line x1="460" y1="282" x2="760" y2="282" stroke="#10B981" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+      <line x1="440" y1="282" x2="150" y2="282" stroke="#10B981" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+      <text x="450" y="277" text-anchor="middle" fill="#10B981" font-size="9" font-weight="700" font-family="monospace">queue:update (broadcast)</text>
+      <line x1="460" y1="298" x2="760" y2="298" stroke="#F43F5E" stroke-width="1.5" marker-end="url(#arrowRose)"/>
+      <line x1="440" y1="298" x2="150" y2="298" stroke="#F43F5E" stroke-width="1.5" marker-end="url(#arrowRose)"/>
+      <text x="450" y="293" text-anchor="middle" fill="#F43F5E" font-size="9" font-weight="700" font-family="monospace">emergency:alert (broadcast)</text>
+
+      <!-- Section: queue:pause -->
+      <text x="130" y="328" text-anchor="middle" fill="#3C4F6E" font-size="8" font-family="monospace">── queue control ──</text>
+      <line x1="140" y1="344" x2="440" y2="344" stroke="#F5A623" stroke-width="1.5" marker-end="url(#arrowAmber)"/>
+      <text x="285" y="339" text-anchor="middle" fill="#F5A623" font-size="9" font-weight="700" font-family="monospace">queue:pause / queue:resume</text>
+      <line x1="460" y1="358" x2="760" y2="358" stroke="#F5A623" stroke-width="1.5" marker-end="url(#arrowAmber)"/>
+      <line x1="440" y1="358" x2="150" y2="358" stroke="#F5A623" stroke-width="1.5" marker-end="url(#arrowAmber)"/>
+      <text x="450" y="353" text-anchor="middle" fill="#F5A623" font-size="9" font-weight="700" font-family="monospace">queue:paused | queue:resumed (broadcast)</text>
+
+      <!-- Section: reconnect -->
+      <text x="130" y="388" text-anchor="middle" fill="#3C4F6E" font-size="8" font-family="monospace">── reconnection ──</text>
+      <line x1="140" y1="403" x2="440" y2="403" stroke="#6B7FA3" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+      <text x="285" y="398" text-anchor="middle" fill="#6B7FA3" font-size="9" font-weight="700" font-family="monospace">reconnect:sync (on reconnect)</text>
+      <line x1="440" y1="417" x2="150" y2="417" stroke="#10B981" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+      <text x="285" y="412" text-anchor="middle" fill="#10B981" font-size="9" font-weight="700" font-family="monospace">queue:sync (full state)</text>
+
+      <!-- Notes -->
+      <rect x="30" y="445" width="250" height="70" rx="8" fill="rgba(13,185,215,0.05)" stroke="rgba(13,185,215,0.2)" stroke-width="1"/>
+      <text x="155" y="462" text-anchor="middle" fill="#0DB9D7" font-size="9" font-weight="700" font-family="monospace">🏥 PRIORITY QUEUE</text>
+      <text x="155" y="478" text-anchor="middle" fill="#8C9BBB" font-size="8" font-family="monospace">emergency (0) → senior (1) → normal (2)</text>
+      <text x="155" y="493" text-anchor="middle" fill="#8C9BBB" font-size="8" font-family="monospace">FIFO within each tier. Wait time computed</text>
+      <text x="155" y="508" text-anchor="middle" fill="#8C9BBB" font-size="8" font-family="monospace">from rolling avg of completed consults.</text>
+
+      <rect x="325" y="445" width="250" height="70" rx="8" fill="rgba(245,166,35,0.06)" stroke="rgba(245,166,35,0.2)" stroke-width="1"/>
+      <text x="450" y="462" text-anchor="middle" fill="#F5A623" font-size="9" font-weight="700" font-family="monospace">⚡ CONCURRENCY GUARD</text>
+      <text x="450" y="478" text-anchor="middle" fill="#8C9BBB" font-size="8" font-family="monospace">Each mutation carries a UUID eventId.</text>
+      <text x="450" y="493" text-anchor="middle" fill="#8C9BBB" font-size="8" font-family="monospace">Server tracks processedEventIds (Set) to</text>
+      <text x="450" y="508" text-anchor="middle" fill="#8C9BBB" font-size="8" font-family="monospace">deduplicate retried events on reconnect.</text>
+
+      <rect x="620" y="445" width="250" height="70" rx="8" fill="rgba(16,185,129,0.05)" stroke="rgba(16,185,129,0.2)" stroke-width="1"/>
+      <text x="745" y="462" text-anchor="middle" fill="#10B981" font-size="9" font-weight="700" font-family="monospace">⏱ WAIT TIME ENGINE</text>
+      <text x="745" y="478" text-anchor="middle" fill="#8C9BBB" font-size="8" font-family="monospace">estimatedWait = Σ(durations ahead)</text>
+      <text x="745" y="493" text-anchor="middle" fill="#8C9BBB" font-size="8" font-family="monospace">Duration per type = rolling average of</text>
+      <text x="745" y="508" text-anchor="middle" fill="#8C9BBB" font-size="8" font-family="monospace">completed consultations (not hardcoded).</text>
+
+      <text x="450" y="545" text-anchor="middle" fill="#162035" font-size="9" font-family="monospace">Queue Cure '26 — Wooble Hackathon Submission</text>
+    </svg>
+  </div>
+
+  <!-- Event Reference -->
+  <p class="section-label">Full Event Reference</p>
+  <div class="event-grid">
+    <div>
+      <p class="col-label" style="color:#0DB9D7">Client → Server</p>
+      <div class="pills" id="c2s-pills"></div>
+    </div>
+    <div>
+      <p class="col-label" style="color:#10B981">Server → Client</p>
+      <div class="pills" id="s2c-pills"></div>
+    </div>
+  </div>
+
+  <!-- Detail Panel -->
+  <div class="detail" id="detail-panel">
+    <div class="detail-header">
+      <span class="detail-dir" id="detail-dir"></span>
+      <code class="detail-name" id="detail-name"></code>
+    </div>
+    <p class="detail-trigger"><strong>Trigger: </strong><span id="detail-trigger"></span></p>
+    <p class="label-sm" style="margin-top:12px">Payload</p>
+    <code class="payload-code" id="detail-payload"></code>
+    <div id="detail-response-wrap">
+      <p class="label-sm">Response / Side Effects</p>
+      <p class="response-text" id="detail-response"></p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const EVENTS = [
+  { dir:'c2s', name:'patient:add', color:'#0DB9D7', trigger:'Receptionist submits Add Patient form', payload:'{ name, age, consultationType, priority, notes?, doctorId?, eventId }', response:'ACK → { success, data: Patient } + queue:update broadcast' },
+  { dir:'c2s', name:'token:next', color:'#0DB9D7', trigger:'"Call Next" button clicked', payload:'{ eventId }', response:'ACK → { success, data: Patient } + queue:update + token:called broadcasts' },
+  { dir:'c2s', name:'emergency:insert', color:'#F43F5E', trigger:'Emergency Insert form submitted', payload:'{ name, age, consultationType, notes?, doctorId?, eventId }', response:'ACK → { success } + queue:update + emergency:alert broadcasts' },
+  { dir:'c2s', name:'patient:update', color:'#0DB9D7', trigger:'"Done" / "No-show" / "Cancel" clicked on PatientRow', payload:'{ patientId, status: completed|no-show|cancelled, eventId }', response:'ACK → { success } + queue:update broadcast' },
+  { dir:'c2s', name:'patient:notes', color:'#0DB9D7', trigger:'Notes saved on PatientRow inline editor', payload:'{ patientId, notes, eventId }', response:'ACK → { success } + queue:update broadcast' },
+  { dir:'c2s', name:'patient:reorder', color:'#0DB9D7', trigger:'↑ / ↓ reorder buttons clicked', payload:'{ patientId, direction: up|down, eventId }', response:'ACK → { success } + queue:update broadcast' },
+  { dir:'c2s', name:'patient:assignDoctor', color:'#0DB9D7', trigger:'Doctor pill selected on PatientRow', payload:'{ patientId, doctorId, eventId }', response:'ACK → { success } + queue:update broadcast' },
+  { dir:'c2s', name:'queue:pause / queue:resume', color:'#F5A623', trigger:'Pause / Resume button clicked', payload:'{ reason? } / {}', response:'queue:update + queue:paused|queue:resumed broadcasts' },
+  { dir:'c2s', name:'reconnect:sync', color:'#6B7FA3', trigger:'Socket reconnects after disconnect', payload:'{}', response:'Server emits queue:sync with full current state' },
+  { dir:'s2c', name:'queue:sync', color:'#10B981', trigger:'On initial connect OR after reconnect:sync', payload:'FullQueueState { patients, stats, doctors, waitTimes, activityLog, isPaused }' },
+  { dir:'s2c', name:'queue:update', color:'#10B981', trigger:'After any mutation (broadcast to ALL clients)', payload:'FullQueueState — same shape as queue:sync' },
+  { dir:'s2c', name:'token:called', color:'#F5A623', trigger:'When token:next is processed', payload:'{ token: number, name: string, doctorId? }' },
+  { dir:'s2c', name:'emergency:alert', color:'#F43F5E', trigger:'When emergency:insert is processed', payload:'{ patient: Patient }' },
+  { dir:'s2c', name:'queue:paused / queue:resumed', color:'#F5A623', trigger:'When queue:pause / queue:resume is processed', payload:'{ reason? } / {}' },
+];
+
+let active = null;
+
+function renderPills() {
+  const c2s = document.getElementById('c2s-pills');
+  const s2c = document.getElementById('s2c-pills');
+  EVENTS.forEach(e => {
+    const btn = document.createElement('button');
+    btn.className = 'pill';
+    btn.id = 'pill-' + e.name.replace(/[^a-z0-9]/gi,'-');
+    btn.style.borderColor = '#162035';
+    btn.innerHTML = `
+      <div class="pill-top">
+        <div class="pill-left">
+          <span class="badge ${e.dir === 'c2s' ? 'badge-c2s' : 'badge-s2c'}">${e.dir === 'c2s' ? 'C→S' : 'S→C'}</span>
+          <code class="pill-name" style="color:${e.color}">${e.name}</code>
+        </div>
+      </div>
+      <p class="pill-trigger">${e.trigger}</p>`;
+    btn.onclick = () => toggle(e, btn);
+    (e.dir === 'c2s' ? c2s : s2c).appendChild(btn);
+  });
+}
+
+function toggle(e, btn) {
+  const panel = document.getElementById('detail-panel');
+  if (active === e.name) {
+    active = null;
+    panel.classList.remove('visible');
+    btn.classList.remove('active');
+    btn.style.borderColor = '#162035';
+    btn.style.background = '#080F1D';
+    return;
+  }
+  // Reset previous
+  document.querySelectorAll('.pill').forEach(p => {
+    p.classList.remove('active');
+    p.style.borderColor = '#162035';
+    p.style.background = '#080F1D';
+  });
+  active = e.name;
+  btn.classList.add('active');
+  btn.style.borderColor = e.color + '60';
+  btn.style.background = e.color + '18';
+
+  // Fill panel
+  const dir = document.getElementById('detail-dir');
+  dir.textContent = e.dir === 'c2s' ? 'Client → Server' : 'Server → Client';
+  dir.style.background = e.dir === 'c2s' ? 'rgba(13,185,215,0.15)' : 'rgba(16,185,129,0.15)';
+  dir.style.color = e.dir === 'c2s' ? '#0DB9D7' : '#10B981';
+  document.getElementById('detail-name').textContent = e.name;
+  document.getElementById('detail-name').style.color = e.color;
+  document.getElementById('detail-trigger').textContent = e.trigger;
+  document.getElementById('detail-payload').textContent = e.payload;
+  panel.style.border = `1px solid ${e.color}40`;
+  const rw = document.getElementById('detail-response-wrap');
+  if (e.response) {
+    rw.style.display = 'block';
+    document.getElementById('detail-response').textContent = e.response;
+  } else {
+    rw.style.display = 'none';
+  }
+  panel.classList.add('visible');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+renderPills();
+</script>
+</body>
+</html>
