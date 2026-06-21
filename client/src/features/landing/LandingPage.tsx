@@ -140,25 +140,7 @@ export function LandingPage({ onSelect }: Props) {
           ))}
         </div>
 
-        {/* Diagram link */}
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          onClick={() => onSelect('diagram')}
-          className="w-full py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
-          style={{
-            background: 'transparent',
-            border: '1px solid #162035',
-            color: '#3C4F6E',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#8C9BBB'; e.currentTarget.style.borderColor = '#1E3050'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#3C4F6E'; e.currentTarget.style.borderColor = '#162035'; }}
-        >
-          🔌 Socket Event Diagram — for hackathon judges
-        </motion.button>
-
-        <p className="text-center text-[10px] mt-6" style={{ color: '#1E3050' }}>
+<p className="text-center text-[10px] mt-6" style={{ color: '#1E3050' }}>
           Queue Cure '26 · Wooble Hackathon Submission
         </p>
       </motion.div>
